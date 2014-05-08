@@ -1,15 +1,26 @@
 module MyApp
   class HomeController
-    def index
-      [200, {'Content-Type' => 'text/html'}, ['index']]
+    def index(request)
+      'index'
     end
 
-    def test
-      [200, {'Content-Type' => 'text/html'}, ['test']]
+    def test(request)
+      BRMVC::Response.new 'test'
     end
 
-    def test_with_parameter(param)
-      [200, {'Content-Type' => 'text/html'}, ['test param ' + param]]
+    def test_with_parameter(request, param)
+      if param == '1'
+        return BRMVC::Redirect.new(request.router.url :test_with_parameter, {:some_param => 2})
+      end
+
+      template = BRMVC::Template.new 'test_with_parameter'
+
+      template.with({
+        :param1 => param,
+        :param2 => 'test'
+      })
+
+      template
     end
   end
 end

@@ -5,7 +5,7 @@ module BRMVC
     end
 
     def call(env)
-      @router.handle Request.new(env)
+      @router.handle Request.new(Rack::Request.new(env), @router)
     end
   end
 end

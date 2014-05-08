@@ -1,40 +1,66 @@
 module BRMVC
   class Route
-    COMON_PARAM_PATTERNS = { 
-      :number => /\-?\d+(?:\.\d+)?/, 
-      :integer => /\-?\d+/, 
-      :alphanum => /[0-9a-zA-Z]+/ 
+
+    COMON_PARAM_PATTERNS = {
+      :number => /\-?\d+(?:\.\d+)?/,
+      :integer => /\-?\d+/,
+      :alphanum => /[0-9a-zA-Z]+/
     }
 
-    attr_accessor :method, :uri, :controller, :action, :params
+    OPTIONAL_PARAM_SEPARATORS = %w{/ , ; . : - _ ~ + * = @ |}
 
-    def initialize(method, uri, action)
-      @method = method
-      @uri = uri
-
-      action = action.split '.'
-
-      @controller = action[0]
-      @action = action[1]
-      @params = {}
-    end
+    attr_accessor :method, :uri, :controller, :action, :name
 
     def uri_regexp
-      pattern = '\A' + @uri + '\z'
-      @params.each do |param, param_pattern|
-        pattern.gsub!(':' + param.to_s, '(' + param_pattern.to_s + ')')
-      end
-
-      Regexp.new pattern
+      Regexp.new @uri_regexp
     end
 
-    def where(param, pattern)
+    def initialize(method, uri, controller, action)
+      @method = method
+      @uri = uri
+      @controller = controller
+      @action = action
+      @uri_regexp = '\A' + uri + '\z'
+      @name = nil
+    end
+
+    def where_one(param, pattern)
       if COMON_PARAM_PATTERNS.has_key? pattern
         pattern = COMON_PARAM_PATTERNS[pattern]
       end
 
-      @params[param] = pattern
+      regex_part = '(' + pattern.to_s + ')'
+      param = ':' + param.to_s
+
+      if param.to_s[-1] == '?'
+        regex_part << '?'
+
+        param_pos = @uri_regexp.index(param)
+        pre_param_char = @uri_regexp[param_pos - 1]
+
+        if OPTIONAL_PARAM_SEPARATORS.include? pre_param_char
+          param = pre_param_char + param
+          regex_part = pre_param_char + '?' + regex_part
+        end
+      end
+
+      @uri_regexp.gsub!(param, regex_part)
+    end
+
+    def where(param, pattern = nil)
+      if pattern.nil? and param.is_a? Hash
+        param.each { |name, pattern| where_one name, pattern }
+      else
+        where_one param, pattern
+      end
+
+      self
+    end
+
+    def as(name)
+      @name = name
     end
 
   end
 end
+
